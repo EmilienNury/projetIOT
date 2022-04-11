@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "344422644875",
+    "firebase_url": "https://iotnfc-6409c-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "iotnfc-6409c",
+    "storage_bucket": "iotnfc-6409c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344422644875:android:e6bf5c3813db5c3ef3288e",
+        "android_client_info": {
+          "package_name": "com.example.iotnfc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "344422644875-93d1hgr0bdp0a3evkqme6pep3hi7bu12.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0rO3XTGbYBo3uMymErxRppkCyQoyCJ-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "344422644875-93d1hgr0bdp0a3evkqme6pep3hi7bu12.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
