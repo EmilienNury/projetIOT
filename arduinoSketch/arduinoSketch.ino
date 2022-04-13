@@ -1,3 +1,9 @@
+#if CONFIG_FREERTOS_UNICORE
+#define ARDUINO_RUNNING_CORE 0
+#else
+#define ARDUINO_RUNNING_CORE 1
+#endif
+
 #include <NfcAdapter.h>
 #include <PN532/PN532/PN532.h>
 #include <Arduino.h>
@@ -58,11 +64,13 @@ FirebaseConfig config;
 bool signupOK = false;
 
 const int speaker = 26;//set speaker to pin 8
+const int buttonPin = 36;     // the number of the pushbutton pin
 
+int buttonState = 0;         // variable for reading the pushbutton status
 int pirPin = 34;                 // PIR Out pin 
 int pirStat = 0;  
 
-bool IsAlarmActivated = true; //TODO swap
+bool IsAlarmActivated = false; //TODO swap
 bool IsAlarmOn = false;
 
 WiFiUDP ntpUDP;
@@ -82,14 +90,17 @@ void noTone() {
   tone(playing, 0);
 }
 
+// define tasks for Alarm, MotionDetection & ReadNFC
+void TaskAlarm( void *pvParameters );
+void TaskMotionDetection( void *pvParameters );
+void TaskReadNFC( void *pvParameters );
+
+// the setup function runs once when you press reset or power the board
 void setup() {
-  SERIAL.begin(115200);
+  
+  // initialize serial communication at 115200 bits per second:
+  Serial.begin(115200);
   SERIAL.println("NDEF Reader");
-  nfc.begin();
-  pinMode(speaker, OUTPUT);//define the speaker as an output
-  pinMode(pirPin, INPUT);
-  Serial.print(WIFI_SSID);
-   Serial.print(WIFI_PASSWORD);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED){
@@ -123,48 +134,136 @@ void setup() {
   Firebase.reconnectWiFi(true);
   timeClient.begin();
   timeClient.setTimeOffset(7200);
+  
+  // Now set up tasks to run independently.
+  xTaskCreatePinnedToCore(
+    TaskAlarm
+    ,  "Alarm"   // A name just for humans
+    ,  8192  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  NULL
+    ,  3  // Priority, with 3 (configMAX_PRIORITIES - 1) being the highest, and 0 being the lowest.
+    ,  NULL 
+    ,  ARDUINO_RUNNING_CORE);
 
+  xTaskCreatePinnedToCore(
+    TaskMotionDetection
+    ,  "MotionDetection"
+    ,  8192  // stack size
+    ,  NULL
+    ,  2  // Priority
+    ,  NULL 
+    ,  ARDUINO_RUNNING_CORE);
+    
+  xTaskCreatePinnedToCore(
+    TaskReadNFC
+    ,  "ReadNFC"
+    ,  8192  // Stack size
+    ,  NULL
+    ,  1  // Priority
+    ,  NULL 
+    ,  ARDUINO_RUNNING_CORE);
 
+  // Now the task scheduler, which takes over control of scheduling individual tasks, is automatically started.
 }
 
-void loop() {
-  if (IsAlarmActivated){
-    pirStat = digitalRead(pirPin); 
-    if (pirStat == HIGH) {   // if motion detected
-      IsAlarmOn = true;
-      if(Firebase.ready() && signupOK){
-        String date = getDate();
-        if(Firebase.RTDB.setString(&fbdo, "Alarm/"+date,date)){
-           Serial.println("PASSED");
-           Serial.println("PATH: " + fbdo.dataPath());
-           Serial.println("TYPE: " + fbdo.dataType());
-        }else{
-          Serial.println("FAILED");
-          Serial.println("REASON: " + fbdo.errorReason());
+void loop()
+{
+  // Empty. Things are done in Tasks.
+}
+
+/*--------------------------------------------------*/
+/*---------------------- Tasks ---------------------*/
+/*--------------------------------------------------*/
+
+void TaskAlarm(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+
+  pinMode(speaker, OUTPUT);//define the speaker as an output
+  pinMode(buttonPin, INPUT);// initialize the pushbutton pin as an input
+
+  for (;;) // A Task shall never return or exit.
+  {
+    // read the state of the pushbutton value:
+    buttonState = digitalRead(buttonPin);
+    // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+    if (buttonState == HIGH) {
+      // turn LED on:
+      if (IsAlarmActivated) {
+        Serial.println("Alarm deactivated");
+        IsAlarmActivated = false;
+        if (IsAlarmOn) {
+          IsAlarmOn = false;
         }
+      } else {
+        Serial.println("Alarm activated");
+        IsAlarmActivated = true;
       }
-    
-    } else {
-      //IsAlarmOn = false; //TODO appuit sur un bouton
+      
     }
-  }
-  if (IsAlarmOn) {
-    tone(speaker, 800);
+    
+    if (IsAlarmOn) {
+      tone(speaker, 800);
+      delay(200);
+      tone(speaker, 600);
+      //delay(200);
+    } else {
+      noTone();
+      digitalWrite(speaker, LOW);// if else don't set off alarm
+    }
     delay(200);
-    tone(speaker, 600);
-    //delay(200);
-  } else {
-    noTone();
-    digitalWrite(speaker, LOW);// if else don't set off alarm
   }
-  if (nfc.tagPresent()) {
+}
+
+void TaskMotionDetection(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+
+  pinMode(pirPin, INPUT);
+
+  for (;;) // A Task shall never return or exit.
+  {
+    if (IsAlarmActivated){
+      pirStat = digitalRead(pirPin); 
+      if (pirStat == HIGH) {   // if motion detected
+          IsAlarmOn = true;
+          if(Firebase.ready() && signupOK){
+            String date = getDate();
+            if(Firebase.RTDB.setString(&fbdo, "Alarm/"+date,date)){
+              Serial.println("PASSED");
+              Serial.println("PATH: " + fbdo.dataPath());
+              Serial.println("TYPE: " + fbdo.dataType());
+            }else{
+              Serial.println("FAILED");
+              Serial.println("REASON: " + fbdo.errorReason());
+            }
+          }
+          delay(2000);
+      } else {
+        //IsAlarmOn = false; //TODO appuit sur un bouton
+      }
+    }
+    delay(200);
+  }
+}
+
+void TaskReadNFC(void *pvParameters)  // This is a task.
+{
+  (void) pvParameters;
+  
+  nfc.begin();
+  
+  for (;;)
+  {
+    if (nfc.tagPresent()) {
         NfcTag tag = nfc.read();
         tag.print();
         IsAlarmActivated = false;
         IsAlarmOn = false;
         Firebase.RTDB.setString(&fbdo, "Entry/" + getDate(),tag.getUidString());
     }
-    //delay(5000);
+    delay(500);
+  }
 }
 
 String getDate(){
