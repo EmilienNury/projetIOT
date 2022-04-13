@@ -23,14 +23,13 @@ class AdapterFirebase(val alarm: HashMap<String,String>, val context: Context ) 
     }
 
     override fun onBindViewHolder(holder: CustomViewHolder, position: Int) {
-        alarm.values.forEach {
-            holder.date.text = it
-            holder.type.text = "Détection présence"
-        }
-
+        var values: MutableCollection<String> = alarm.values
+        holder.date.text = values.elementAt(position)
+        holder.type.text = "Détection"
     }
 
     override fun getItemCount(): Int {
         return alarm.size
     }
 }
+
