@@ -7,8 +7,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projetiot.R
+import com.example.projetiot.model.Data
 
-class AdapterFirebase(val alarm: HashMap<String,String>, val context: Context ) :
+class AdapterFirebase(val alarm: HashMap<String, Data>, val context: Context ) :
     RecyclerView.Adapter<AdapterFirebase.CustomViewHolder>() {
 
     class CustomViewHolder(mView: View) : RecyclerView.ViewHolder(mView){
@@ -23,9 +24,16 @@ class AdapterFirebase(val alarm: HashMap<String,String>, val context: Context ) 
     }
 
     override fun onBindViewHolder(holder: CustomViewHolder, position: Int) {
-        var values: MutableCollection<String> = alarm.values
-        holder.date.text = values.elementAt(position)
-        holder.type.text = "Détection"
+        if (alarm.values.elementAt(position).type == "entry") {
+            var values: MutableCollection<Data> = alarm.values
+            holder.date.text = alarm
+            holder.type.text = values.elementAt(position).value
+        } else {
+            var values: MutableCollection<Data> = alarm.values
+            holder.date.text = values.elementAt(position).value
+            holder.type.text = "Détection"
+        }
+
     }
 
     override fun getItemCount(): Int {

@@ -8,6 +8,7 @@ import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projetiot.adapter.AdapterFirebase
+import com.example.projetiot.model.Data
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
@@ -25,7 +26,15 @@ class MainActivity : AppCompatActivity() {
             database.child("Entry").get().addOnSuccessListener {
                 var entry: HashMap<String,String> = it.value as HashMap<String, String>;
                 val recyclerView = this.findViewById<RecyclerView>(R.id.firebaseRecylerView)
-                val adapter = AdapterFirebase(alarm,this)
+                var result = HashMap<String, Data>()
+                for (a in alarm) {
+                    result.put(a.key, Data(a.value, "alarm"))
+
+                }
+                for (e in entry) {
+                    result.put(e.key, Data(e.value, "entry"))
+                }
+                val adapter = AdapterFirebase(result as HashMap<String, Data>, this)
                 val layoutManager : RecyclerView.LayoutManager = LinearLayoutManager(this)
                 recyclerView.layoutManager = layoutManager
                 recyclerView.adapter = adapter
