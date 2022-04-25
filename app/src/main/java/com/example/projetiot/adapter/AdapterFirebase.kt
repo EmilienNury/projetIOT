@@ -26,8 +26,9 @@ class AdapterFirebase(val alarm: HashMap<String, Data>, val context: Context ) :
     override fun onBindViewHolder(holder: CustomViewHolder, position: Int) {
         if (alarm.values.elementAt(position).type == "entry") {
             var values: MutableCollection<Data> = alarm.values
-            holder.date.text = alarm
-            holder.type.text = values.elementAt(position).value
+            var keys: MutableCollection<String> = alarm.keys
+            holder.date.text = keys.elementAt(position)
+            holder.type.text = "Entrée: \n"+values.elementAt(position).value
         } else {
             var values: MutableCollection<Data> = alarm.values
             holder.date.text = values.elementAt(position).value
